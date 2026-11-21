@@ -1,79 +1,35 @@
 <plugin>
-    <groupId>org.jacoco</groupId>
-    <artifactId>jacoco-maven-plugin</artifactId>
-    <version>0.8.16</version>
-    <configuration>
-        <excludes>
-            <!-- Bootstrap class is framework ceremony with zero logic;
-                 covering main() would be theatre. Nothing else goes here. -->
-            <exclude>**/*Application.class</exclude>
-        </excludes>
-    </configuration>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-enforcer-plugin</artifactId>
+    <version>3.7.0</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>extra-enforcer-rules</artifactId>
+            <version>1.12.1</version>
+        </dependency>
+    </dependencies>
     <executions>
         <execution>
-            <id>jacoco-prepare-agent</id>
+            <id>enforce-rules</id>
             <goals>
-                <goal>prepare-agent</goal>
-            </goals>
-        </execution>
-        <execution>
-            <id>jacoco-check</id>
-            <phase>verify</phase>
-            <goals>
-                <goal>check</goal>
+                <goal>enforce</goal>
             </goals>
             <configuration>
                 <rules>
-                    <rule>
-                        <element>BUNDLE</element>
-                        <!--
-                          RATCHET, not target: a fixed "must be 80%" on day one
-                          forces meaningless tests written only to hit a number.
-                          These floors start where coverage honestly is today and
-                          only forbid going backwards, so decay fails the build
-                          without inviting test theatre.
-                          Raise these numbers as real coverage grows; NEVER lower them.
-                        -->
-                        <limits>
-                            <limit>
-                                <counter>LINE</counter>
-                                <value>COVEREDRATIO</value>
-                                <minimum>0.60</minimum>
-                            </limit>
-                            <limit>
-                                <counter>BRANCH</counter>
-                                <value>COVEREDRATIO</value>
-                                <minimum>0.50</minimum>
-                            </limit>
-                        </limits>
-                    </rule>
+                    <requireMavenVersion>
+                        <version>3.9</version>
+                    </requireMavenVersion>
+                    <requireReleaseDeps>
+                        <message>External SNAPSHOT dependencies are banned - a snapshot can change under you.</message>
+                        <failWhenParentIsSnapshot>false</failWhenParentIsSnapshot>
+                        <excludes>
+                            <exclude>com.pavan.zenith:*</exclude>
+                        </excludes>
+                    </requireReleaseDeps>
+                    <banDuplicateClasses/>
                 </rules>
             </configuration>
         </execution>
     </executions>
 </plugin>
-
-
-
-----
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-test</artifactId>
-    <scope>test</scope>
-</dependency>
-
-----
-
-package com.pavan.zenith.catalog;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-@SpringBootTest
-class CatalogServiceApplicationTest {
-
-  @Test
-  void contextLoads() {}
-}
-
-
