@@ -1,34 +1,19 @@
-root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-insert_final_newline = true
-trim_trailing_whitespace = true
-indent_style = space
-indent_size = 4
-
-[*.{yml,yaml}]
-indent_size = 2
-
-[*.md]
-trim_trailing_whitespace = false
-
-
-____
-* text=auto
-
-----
-# Maven build output
-target/
-
-# IDE state
-.idea/
-*.iml
-.vscode/
-
-# macOS junk
-.DS_Store
-
-# Local secrets and environment
-.env
+<plugin>
+    <groupId>com.diffplug.spotless</groupId>
+    <artifactId>spotless-maven-plugin</artifactId>
+    <version>3.12.0</version>
+    <configuration>
+        <java>
+            <googleJavaFormat/>
+        </java>
+    </configuration>
+    <executions>
+        <execution>
+            <id>spotless-check</id>
+            <phase>validate</phase>
+            <goals>
+                <goal>check</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
