@@ -1,151 +1,86 @@
-package com.pavan.zenith.catalog.domain.model;
+package com.pavan.zenith.common.values;
 
-import java.util.UUID;
+import java.util.List;
 
-// sketch — the real Event aggregate is built in Phase 1
-public class Event {
+public record Granted(List<SeatCoordinate> seats) implements HoldResult {
 
-  public enum Status {
-    DRAFT,
-    PUBLISHED
-  }
-
-  private final UUID id;
-  private String title;
-  private Status status;
-
-  public Event(final UUID id, final String title) {
-    if (id == null) {
-      throw new IllegalArgumentException("id must not be null");
-    }
-    if (title == null || title.isBlank()) {
-      throw new IllegalArgumentException("title must not be blank");
-    }
-    this.id = id;
-    this.title = title;
-    this.status = Status.DRAFT;
-  }
-
-  public void rename(final String newTitle) {
-    if (newTitle == null || newTitle.isBlank()) {
-      throw new IllegalArgumentException("title must not be blank");
-    }
-    this.title = newTitle;
-  }
-
-  public void publish() {
-    if (status != Status.DRAFT) {
-      throw new IllegalStateException("only a draft event can be published, was: " + status);
-    }
-    this.status = Status.PUBLISHED;
-  }
-
-  public UUID id() {
-    return id;
-  }
-
-  public String title() {
-    return title;
-  }
-
-  public Status status() {
-    return status;
-  }
-
-  @Override
-  public boolean equals(final Object other) {
-    if (this == other) {
-      return true;
-    }
-    if (!(other instanceof Event event)) {
-      return false;
-    }
-    return id.equals(event.id);
-  }
-
-  @Override
-  public int hashCode() {
-    return id.hashCode();
+  public Granted {
+    seats = List.copyOf(seats);
   }
 }
 
 
+  ------------
+
+package com.pavan.zenith.common.values;
+
+public record Rejected(String reason) implements HoldResult {
+
+  public Rejected {
+    if (reason == null || reason.isBlank()) {
+      throw new IllegalArgumentException("reason must not be blank");
+    }
+  }
+}
+
+
+---------
+
+package com.pavan.zenith.common.values;
+
+import java.util.List;
+
+public record PartiallyGranted(List<SeatCoordinate> granted, List<SeatCoordinate> refused)
+    implements HoldResult {
+
+  public PartiallyGranted {
+    granted = List.copyOf(granted);
+    refused = List.copyOf(refused);
+  }
+}
+
 ----------
-package com.pavan.zenith.catalog.domain.model;
+
+package com.pavan.zenith.common.values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.UUID;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class EventTest {
+class HoldResultTest {
+
+  private static final SeatCoordinate A1 = new SeatCoordinate("A", 1);
+  private static final SeatCoordinate A2 = new SeatCoordinate("A", 2);
 
   @Test
-  void sameIdMeansSameEventEvenWithDifferentTitles() {
-    UUID id = UUID.randomUUID();
-    Event first = new Event(id, "Coldplay Mumbai");
-    Event second = new Event(id, "Coldplay Mumbai rescheduled");
-    assertTrue(first.equals(second));
-    assertEquals(first.hashCode(), second.hashCode());
+  void grantedIsDescribed() {
+    assertEquals("granted 2 seats", describe(new Granted(List.of(A1, A2))));
   }
 
   @Test
-  void differentIdMeansDifferentEventEvenWithSameTitle() {
-    Event first = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    Event second = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    assertFalse(first.equals(second));
+  void rejectedIsDescribed() {
+    assertEquals("rejected: sold out", describe(new Rejected("sold out")));
   }
 
   @Test
-  void notEqualToNullOrOtherTypes() {
-    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    assertFalse(event.equals(null));
-    assertTrue(event.equals(event));
+  void partiallyGrantedIsDescribed() {
+    assertEquals("granted 1, refused 1", describe(new PartiallyGranted(List.of(A1), List.of(A2))));
   }
 
   @Test
-  void renamingChangesNeitherEqualityNorHashCode() {
-    UUID id = UUID.randomUUID();
-    Event event = new Event(id, "Old title");
-    int hashBefore = event.hashCode();
-    event.rename("New title");
-    assertEquals("New title", event.title());
-    assertEquals(hashBefore, event.hashCode());
-    assertTrue(event.equals(new Event(id, "Something else entirely")));
+  void rejectionWithoutAReasonIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Rejected(" "));
   }
 
-  @Test
-  void publishMovesADraftToPublished() {
-    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    assertEquals(Event.Status.DRAFT, event.status());
-    event.publish();
-    assertEquals(Event.Status.PUBLISHED, event.status());
-  }
-
-  @Test
-  void publishRefusesWhenAlreadyPublished() {
-    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    event.publish();
-    assertThrows(IllegalStateException.class, event::publish);
-  }
-
-  @Test
-  void constructorRefusesNullId() {
-    assertThrows(IllegalArgumentException.class, () -> new Event(null, "Coldplay Mumbai"));
-  }
-
-  @Test
-  void constructorRefusesBlankTitle() {
-    assertThrows(IllegalArgumentException.class, () -> new Event(UUID.randomUUID(), " "));
-  }
-
-  @Test
-  void renameRefusesBlankTitle() {
-    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
-    assertThrows(IllegalArgumentException.class, () -> event.rename(" "));
+  private static String describe(final HoldResult result) {
+    return switch (result) {
+      case Granted granted -> "granted " + granted.seats().size() + " seats";
+      case Rejected rejected -> "rejected: " + rejected.reason();
+      case PartiallyGranted partial ->
+          "granted " + partial.granted().size() + ", refused " + partial.refused().size();
+    };
   }
 }
 
