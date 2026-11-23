@@ -1,103 +1,153 @@
+package com.pavan.zenith.catalog.domain.model;
 
-pom.xml
+import java.util.UUID;
 
-<dependency>
-    <groupId>com.tngtech.archunit</groupId>
-    <artifactId>archunit-junit5</artifactId>
-    <version>1.5.1</version>
-</dependency>
+// sketch — the real Event aggregate is built in Phase 1
+public class Event {
 
--------
-platform-testing/pom.xml
-<dependencies>
-    <dependency>
-        <groupId>com.tngtech.archunit</groupId>
-        <artifactId>archunit-junit5</artifactId>
-    </dependency>
-</dependencies>
-------
+  public enum Status {
+    DRAFT,
+    PUBLISHED
+  }
 
-package com.pavan.zenith.testing.architecture;
+  private final UUID id;
+  private String title;
+  private Status status;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
-import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_USE_FIELD_INJECTION;
+  public Event(final UUID id, final String title) {
+    if (id == null) {
+      throw new IllegalArgumentException("id must not be null");
+    }
+    if (title == null || title.isBlank()) {
+      throw new IllegalArgumentException("title must not be blank");
+    }
+    this.id = id;
+    this.title = title;
+    this.status = Status.DRAFT;
+  }
 
-import com.tngtech.archunit.junit.ArchTest;
-import com.tngtech.archunit.lang.ArchRule;
+  public void rename(final String newTitle) {
+    if (newTitle == null || newTitle.isBlank()) {
+      throw new IllegalArgumentException("title must not be blank");
+    }
+    this.title = newTitle;
+  }
 
-public abstract class ZenithArchitectureRules {
+  public void publish() {
+    if (status != Status.DRAFT) {
+      throw new IllegalStateException("only a draft event can be published, was: " + status);
+    }
+    this.status = Status.PUBLISHED;
+  }
 
-  @ArchTest
-  static final ArchRule DOMAIN_DEPENDS_ON_NOTHING_OUTSIDE_ITSELF =
-      noClasses()
-          .that()
-          .resideInAPackage("..domain..")
-          .should()
-          .dependOnClassesThat()
-          .resideInAnyPackage(
-              "..application..",
-              "..adapter..",
-              "..config..",
-              "org.springframework..",
-              "jakarta..",
-              "org.hibernate..")
-          .because("domain must stay free of frameworks and outer layers")
-          .allowEmptyShould(true);
+  public UUID id() {
+    return id;
+  }
 
-  @ArchTest
-  static final ArchRule APPLICATION_MAY_NOT_DEPEND_ON_ADAPTER =
-      noClasses()
-          .that()
-          .resideInAPackage("..application..")
-          .should()
-          .dependOnClassesThat()
-          .resideInAPackage("..adapter..")
-          .because("use-cases must not know about delivery or persistence details")
-          .allowEmptyShould(true);
+  public String title() {
+    return title;
+  }
 
-  @ArchTest
-  static final ArchRule JPA_ENTITIES_STAY_IN_PERSISTENCE_ADAPTER =
-      classes()
-          .that()
-          .areAnnotatedWith("jakarta.persistence.Entity")
-          .should()
-          .resideInAPackage("..adapter.out.persistence..")
-          .because("database rows are not domain objects and never cross the adapter boundary")
-          .allowEmptyShould(true);
+  public Status status() {
+    return status;
+  }
 
-  @ArchTest
-  static final ArchRule NO_FIELD_INJECTION =
-      NO_CLASSES_SHOULD_USE_FIELD_INJECTION
-          .because("constructor injection makes dependencies explicit and testable")
-          .allowEmptyShould(true);
+  @Override
+  public boolean equals(final Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (!(other instanceof Event event)) {
+      return false;
+    }
+    return id.equals(event.id);
+  }
 
-  @ArchTest
-  static final ArchRule NO_PUBLIC_SETTERS_ON_AGGREGATES =
-      noMethods()
-          .that()
-          .areDeclaredInClassesThat()
-          .resideInAPackage("..domain.model..")
-          .and()
-          .arePublic()
-          .should()
-          .haveNameMatching("set[A-Z].*")
-          .because("state changes go through intention-named methods: event.publish(), not event.setStatus()")
-          .allowEmptyShould(true);
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
 }
 
--------
 
-package com.pavan.zenith.catalog;
+----------
+package com.pavan.zenith.catalog.domain.model;
 
-import com.pavan.zenith.testing.architecture.ZenithArchitectureRules;
-import com.tngtech.archunit.core.importer.ImportOption;
-import com.tngtech.archunit.junit.AnalyzeClasses;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@AnalyzeClasses(
-    packages = "com.pavan.zenith.catalog",
-    importOptions = ImportOption.DoNotIncludeTests.class)
-class ArchitectureTest extends ZenithArchitectureRules {}
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class EventTest {
+
+  @Test
+  void sameIdMeansSameEventEvenWithDifferentTitles() {
+    UUID id = UUID.randomUUID();
+    Event first = new Event(id, "Coldplay Mumbai");
+    Event second = new Event(id, "Coldplay Mumbai rescheduled");
+    assertTrue(first.equals(second));
+    assertEquals(first.hashCode(), second.hashCode());
+  }
+
+  @Test
+  void differentIdMeansDifferentEventEvenWithSameTitle() {
+    Event first = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    Event second = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    assertFalse(first.equals(second));
+  }
+
+  @Test
+  void notEqualToNullOrOtherTypes() {
+    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    assertFalse(event.equals(null));
+    assertTrue(event.equals(event));
+  }
+
+  @Test
+  void renamingChangesNeitherEqualityNorHashCode() {
+    UUID id = UUID.randomUUID();
+    Event event = new Event(id, "Old title");
+    int hashBefore = event.hashCode();
+    event.rename("New title");
+    assertEquals("New title", event.title());
+    assertEquals(hashBefore, event.hashCode());
+    assertTrue(event.equals(new Event(id, "Something else entirely")));
+  }
+
+  @Test
+  void publishMovesADraftToPublished() {
+    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    assertEquals(Event.Status.DRAFT, event.status());
+    event.publish();
+    assertEquals(Event.Status.PUBLISHED, event.status());
+  }
+
+  @Test
+  void publishRefusesWhenAlreadyPublished() {
+    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    event.publish();
+    assertThrows(IllegalStateException.class, event::publish);
+  }
+
+  @Test
+  void constructorRefusesNullId() {
+    assertThrows(IllegalArgumentException.class, () -> new Event(null, "Coldplay Mumbai"));
+  }
+
+  @Test
+  void constructorRefusesBlankTitle() {
+    assertThrows(IllegalArgumentException.class, () -> new Event(UUID.randomUUID(), " "));
+  }
+
+  @Test
+  void renameRefusesBlankTitle() {
+    Event event = new Event(UUID.randomUUID(), "Coldplay Mumbai");
+    assertThrows(IllegalArgumentException.class, () -> event.rename(" "));
+  }
+}
+
 
 
