@@ -1,88 +1,129 @@
-package com.pavan.zenith.common.values;
+<dependencies>
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
 
-import java.util.List;
-
-public record Granted(List<SeatCoordinate> seats) implements HoldResult {
-
-  public Granted {
-    seats = List.copyOf(seats);
-  }
-}
-
-
-  ------------
-
-package com.pavan.zenith.common.values;
-
-public record Rejected(String reason) implements HoldResult {
-
-  public Rejected {
-    if (reason == null || reason.isBlank()) {
-      throw new IllegalArgumentException("reason must not be blank");
-    }
-  }
-}
-
-
----------
-
-package com.pavan.zenith.common.values;
-
-import java.util.List;
-
-public record PartiallyGranted(List<SeatCoordinate> granted, List<SeatCoordinate> refused)
-    implements HoldResult {
-
-  public PartiallyGranted {
-    granted = List.copyOf(granted);
-    refused = List.copyOf(refused);
-  }
-}
-
-----------
+------
 
 package com.pavan.zenith.common.values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.List;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
-class HoldResultTest {
-
-  private static final SeatCoordinate A1 = new SeatCoordinate("A", 1);
-  private static final SeatCoordinate A2 = new SeatCoordinate("A", 2);
+class MoneyTest {
 
   @Test
-  void grantedIsDescribed() {
-    assertEquals("granted 2 seats", describe(new Granted(List.of(A1, A2))));
+  void negativeAmountIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Money(new BigDecimal("-1"), "USD"));
   }
 
   @Test
-  void rejectedIsDescribed() {
-    assertEquals("rejected: sold out", describe(new Rejected("sold out")));
+  void nullAmountIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Money(null, "USD"));
   }
 
   @Test
-  void partiallyGrantedIsDescribed() {
-    assertEquals("granted 1, refused 1", describe(new PartiallyGranted(List.of(A1), List.of(A2))));
+  void nullCurrencyIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Money(new BigDecimal("500"), null));
   }
 
   @Test
-  void rejectionWithoutAReasonIsRejected() {
-    assertThrows(IllegalArgumentException.class, () -> new Rejected(" "));
+  void nonsenseCurrencyIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Money(new BigDecimal("500"), "ZZZ"));
   }
 
-  private static String describe(final HoldResult result) {
-    return switch (result) {
-      case Granted granted -> "granted " + granted.seats().size() + " seats";
-      case Rejected rejected -> "rejected: " + rejected.reason();
-      case PartiallyGranted partial ->
-          "granted " + partial.granted().size() + ", refused " + partial.refused().size();
-    };
+  @Test
+  void sameValuesAreEqualAndShareAHashCode() {
+    Money first = new Money(new BigDecimal("500"), "INR");
+    Money second = new Money(new BigDecimal("500"), "INR");
+    assertEquals(first, second);
+    assertEquals(first.hashCode(), second.hashCode());
+    assertEquals(new BigDecimal("500"), first.amount());
+    assertEquals("INR", first.currency());
   }
 }
+
+
+
+-----
+
+package com.pavan.zenith.common.values;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
+
+class SlugTest {
+
+  @Test
+  void uppercaseLettersAreRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Slug("Coldplay-Mumbai-2026"));
+  }
+
+  @Test
+  void spacesAreRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Slug("coldplay mumbai 2026"));
+  }
+
+  @Test
+  void nullIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Slug(null));
+  }
+
+  @Test
+  void emptyIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new Slug(""));
+  }
+
+  @Test
+  void aWellFormedSlugIsAccepted() {
+    Slug slug = new Slug("coldplay-mumbai-2026");
+    assertEquals("coldplay-mumbai-2026", slug.value());
+  }
+}
+
+
+
+--------
+package com.pavan.zenith.common.values;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
+
+class SeatCoordinateTest {
+
+  @Test
+  void blankRowIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new SeatCoordinate(" ", 12));
+  }
+
+  @Test
+  void nullRowIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new SeatCoordinate(null, 12));
+  }
+
+  @Test
+  void seatNumberZeroIsRejected() {
+    assertThrows(IllegalArgumentException.class, () -> new SeatCoordinate("A", 0));
+  }
+
+  @Test
+  void aWellFormedCoordinateIsAccepted() {
+    SeatCoordinate seat = new SeatCoordinate("A", 12);
+    assertEquals("A", seat.row());
+    assertEquals(12, seat.number());
+  }
+}
+
 
 
 
