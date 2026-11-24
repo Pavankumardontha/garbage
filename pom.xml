@@ -93,4 +93,41 @@ Rough time order. Past tense. No filtering, no grouping yet.
     into summary numbers finished.
 63. DailySalesReportGenerated — Raj's "how did yesterday go" numbers were prepared.
 
+Identity — 1, 2, 3, 21, 22, 23, 24, 25 (accounts, logins, resets, revocation)
+Catalog — 4, 5, 6, 7, 8, 16, 18, 19, 20, 58 (the show's own life: created, described, priced, published, moved, cancelled, sales opened)
+Inventory — 17, 29, 30, 31, 40, 41, 53 (seats: created, held, rejected, expired, allocated, released, sold out)
+Access control — 54, 55, 56, 57 (the door: scans and their verdicts) — see the note below.
+Orders — 32, 39, 42, 43, 46 (the purchase's life, including "ticket officially exists")
+Payments — 33, 34, 35, 36, 37, 38, 44, 45, 59, 60, 61 (money in, money back, the unknown case, the nightly truth-checks, the chasing reminders)
+Media — 9, 10, 11, 12, 13, 14, 15, 47 (files: uploads, scans, imports, thumbnails, the ticket PDF)
+Notifications — 48, 49, 50, 51, 52 (messages: sent, failed, retried, parked, deduplicated)
+Realtime — 26, 27, 28 (the sale-day queue)
+Reporting — 62, 63 (yesterday's numbers)
+
+
+## Words that change meaning between contexts
+
+**ticket**
+- Catalog: a kind of ticket — a price level with a name and a price (no owner, nothing to scan)
+- Orders: one line of a purchase — this seat at this price in this order
+- Access control: the scannable credential — a QR code, real-or-fake, used-or-unused
+
+**event**
+- Catalog: the show itself — Jazz Night, 14 March, with description and poster
+- Everywhere else in our docs: a fact that happened — OrderPlaced, SeatHeld
+
+**seat**
+- Catalog: a position on the venue map — row A number 12, balcony tier
+- Inventory: a sellable unit with a status — free, held (by whom, until when), or sold
+
+**customer**
+- Identity: an account that can log in — email and password
+- Orders: the buyer — who owes or paid money
+- Notifications: a recipient — a name and an address to send messages to
+
+
+
+
+
+
 
